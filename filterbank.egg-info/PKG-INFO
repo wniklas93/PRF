@@ -1,0 +1,17 @@
+Metadata-Version: 2.1
+Name: filterbank
+Version: 0.3a1
+Summary: Perfect Reconstruction Filter Banks
+Home-page: UNKNOWN
+Author: Niklas Winter
+Author-email: niklas.winter@audiolabs-erlangen.de
+License: proprietary
+Description: UNKNOWN
+Platform: UNKNOWN
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Telecommunications Industry
+Classifier: Intended Audience :: Science/Research
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Topic :: Multimedia :: Sound/Audio :: Analysis
+Classifier: Topic :: Multimedia :: Sound/Audio :: Sound Synthesis
+Provides-Extra: tests
