@@ -1,10 +1,9 @@
 import numpy as np
-from skimage.util import view_as_windows
-
 from torch import zeros, einsum, max, abs, \
     reshape, squeeze, max, is_complex
 
 from torch.nn.functional import pad, fold
+import matplotlib.pyplot as plt
 
 def analysisFB(x, R, window, H):
     '''
@@ -63,8 +62,8 @@ def synthesisFB(Zxx, I, R, window, H, reduction=True):
     # sample, b denotes the batch dimension and w denotes the window  
     x = einsum('kn,kw->knw', H, Zxx)
     x = reshape(x,(1,-1,x.shape[-1]))
-        
-    x_rec = fold(x,output_size=(1,Lout), kernel_size=(1,N), stride=(1,R))
+    print(x.shape, Lout, N, R, w.shape)
+    x_rec = fold(x,output_size=(1,Lout), kernel_size=(1,N), stride=(1,I))
     x_rec = squeeze(x_rec)
             
     if is_complex(x_rec):
