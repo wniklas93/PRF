@@ -1,8 +1,8 @@
 import numpy as np
 from skimage.util import view_as_windows
 
-from torch import from_numpy, zeros, einsum, max, abs, \
-    reshape, squeeze, mul, DoubleTensor, max
+from torch import zeros, einsum, max, abs, \
+    reshape, squeeze, max, is_complex
 
 from torch.nn.functional import pad, fold
 
@@ -23,14 +23,13 @@ def analysisFB(x, R, window, H):
 
     # Zero padding so that combination of window and stride (decimation factor)
     # is aligned with the input signal
-
-    nWindows = (len(x)-N)/R+1
-    L = int((np.ceil(nWindows)-1)*R+N)
-
-    x = pad(x, (0, L - len(x)), 'constant', 0)
-    x = x.unfold(0, N, R) * window
-    
-    Zxx = einsum('kn,wn->wk', H, x)
+        
+    x = x.reshape((1,-1))
+    x = x.unfold(1, N, R) * window
+        
+    # Transform, where k denotes the frequency bin, n denotes the time sample,
+    # w denotes the window bin and b denotes the batch    
+    Zxx = einsum('kn,wn->kw', H, x[0,...])
             
     return Zxx
 
@@ -49,93 +48,41 @@ def synthesisFB(Zxx, I, R, window, H, reduction=True):
     H = H[:, ::R // I]*window
 
     # Signal buffers
-    C, N = H.shape              # Number of channels, window length
-    nWindows, _ = Zxx.shape     # Number of window bins
-
-    #x_rec = zeros((C, (nWindows - 1) * I + N), dtype=float)
+    C, N = H.shape           # Number of channels, window length
+    _, nWindows = Zxx.shape  # Number of window bins
+        
     Lout = (nWindows - 1) * I + N
-    w = zeros(((nWindows - 1) * I + N))
+        
+    w = zeros((Lout))
         
     # Assemble normalization term
     for n in np.arange(nWindows):
         w[n * I:n * I + N] += window**2
-
-    x = einsum('kn,wk->knw', H, Zxx)
+        
+    # Transfrom, where k denotes the frequency bin, n denotes time
+    # sample, b denotes the batch dimension and w denotes the window  
+    x = einsum('kn,kw->knw', H, Zxx)
     x = reshape(x,(1,-1,x.shape[-1]))
-    x_rec = fold(x,output_size=(1,Lout), kernel_size=(1,N), stride=(1,I))
+        
+    x_rec = fold(x,output_size=(1,Lout), kernel_size=(1,N), stride=(1,R))
     x_rec = squeeze(x_rec)
+            
+    if is_complex(x_rec):
+        assert max(abs(x_rec.imag) < 0.00001), '''
+        Real world signals are purely real!'''
+
+        x_rec = x_rec.real
     
     if reduction:
         return np.einsum('kn->n', x_rec)/w
 
     return x_rec/w
 
+def zeropad(x: np.ndarray, C: tuple):
+    return pad(x, (C), 'constant', 0)
 
-# def analysisFB(x, R, window, H):
-#     '''
-#     Given data is subject to an analysis filter bank composed by a certain number
-#     (nBands) channels. If necessary, the filter bank output is critically sampled.
-
-#     Note: Within the current implementation, analysis filters are used which exhibit
-#     brick-wall characteristic
-
-#     Source:
-#     _______
-#     https://ccrma.stanford.edu/~jos/sasp/Two_Channel_Critically_Sampled_Filter.html
-#     '''
-
-#     N = window.shape[0]
-
-#     # Zero padding so that combination of window and stride (decimation factor)
-#     # is aligned with the input signal
-
-#     nWindows = (len(x)-N)/R+1
-#     L = int((np.ceil(nWindows)-1)*R+N)
-#     x = np.pad(x,(0,L-len(x)),constant_values=(0,0)) 
-
-#     x = view_as_windows(x,N,R)*window
-    
-#     # For enabling inversion of the transform, NOLA must be checked:
-#     #assert check_COLA(window,N,N-R), '''OverLap add constraint is not met!'''
-        
-#     Zxx = np.einsum('kn,wn->wk', H,x)
-        
-#     return Zxx
-
-
-# def synthesisFB(Zxx, I, R, window, H, reduction=True):
-#     '''
-#     Given data is subject to synthesis filter bank (Part of perfect
-#     reconstruction filter bank). If necessary, the filter bank output is
-#     upsampled.
-
-#     Note: Synthesis filter bank must correspond to analysis filter
-#     bank
-
-#     '''
-#     # Reduce filter length by decimation factor, represent in 
-#     # resulting filter in polyphase representation and filter 
-#     # signal
-#     H = H[:,::R//I]
-#     x = np.einsum('kn,wk->wkn',H,Zxx)
-#     window = window[::R//I]
-    
-#     # Signal buffers
-#     C, N = H.shape                      # Number of channels, window length
-#     nWindows, _ = Zxx.shape             # Number of window bins in spectrogram
-
-#     x_rec = np.zeros((C,(nWindows-1)*I+N),dtype=complex)
-#     w = np.zeros(((nWindows-1)*I+N))
-
-#     # Overlap add
-#     for n,x_window in enumerate(x):
-#         x_rec[:,n*I:n*I+N] += x_window*window
-#         w[n*I:n*I+N] += window**2
-    
-#     if reduction:
-#         return np.einsum('kn->n', x_rec)/w
-
-#     return x_rec/w
+def crop(x: np.ndarray, C: tuple):
+    return x[..., C[0]:-C[1]]
 
 
 def dft(N):
