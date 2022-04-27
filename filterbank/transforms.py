@@ -62,7 +62,7 @@ def synthesisFB(Zxx, I, R, window, H, reduction=True):
     # sample, b denotes the batch dimension and w denotes the window  
     x = einsum('kn,kw->knw', H, Zxx)
     x = reshape(x,(1,-1,x.shape[-1]))
-    print(x.shape, Lout, N, R, w.shape)
+    
     x_rec = fold(x,output_size=(1,Lout), kernel_size=(1,N), stride=(1,I))
     x_rec = squeeze(x_rec)
             

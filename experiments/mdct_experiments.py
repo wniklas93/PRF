@@ -98,12 +98,12 @@ axes[3].plot(x-sum(x_rec,0), label='Diff')
 
 # %% #####################################################################
 # Downsampling and perfect reconstructing filter bank
-N = 1024                                # Signal length
+N = 5120                                # Signal length
 C = 8                                   # Channels
 M = C*2                                 # Window length
 H = from_numpy(mdct(C))                 # Transform
 R = 4                                   # Decimation factor
-I = 1                                   # Interpolation factor
+I = 2                                   # Interpolation factor
 window = ones((M))                      # Window function
 x = from_numpy(triang(N))               # Signal
 
@@ -113,7 +113,7 @@ x = zeropad(x,(M-R,M-R))
 Zxx = analysisFB(x,R,window,H)
 x_rec = synthesisFB(Zxx,I,R,window,H)
 x = crop(x,(M-R,M-R))
-x_rec = crop(x_rec,((M-R)//R,(M-R)//R))
+x_rec = crop(x_rec,((M-R)//R*I,(M-R)//R*I))
 
 assert np.allclose(x_rec, x[::R//I])
 plt.plot(x_rec, label='x_rec')
