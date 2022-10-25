@@ -1,9 +1,9 @@
 import numpy as np
 from torch import zeros, einsum, max, abs, \
-    reshape, squeeze, max, is_complex
+    reshape, squeeze, max, is_complex, Tensor
 
 from torch.nn.functional import pad, fold
-import matplotlib.pyplot as plt
+from typing import List
 
 def analysisFB(x, R, window, H):
     '''
@@ -25,11 +25,11 @@ def analysisFB(x, R, window, H):
         
     x = x.reshape((1,-1))
     x = x.unfold(1, N, R) * window
-        
+    print(x.shape, H.shape)    
     # Transform, where k denotes the frequency bin, n denotes the time sample,
     # w denotes the window bin and b denotes the batch    
     Zxx = einsum('kn,wn->kw', H, x[0,...])
-            
+    print(x.shape, H.shape, Zxx.shape)        
     return Zxx
 
 def synthesisFB(Zxx, I, R, window, H, reduction=True):
@@ -76,6 +76,32 @@ def synthesisFB(Zxx, I, R, window, H, reduction=True):
         return np.einsum('kn->n', x_rec)/w
 
     return x_rec/w
+
+def FB_Pipeline(x : Tensor, Hs: List[Tensor],
+    I: int = 1, R: int = 1):
+    N = 0
+    for H in Hs:
+        x = filtering(x, H, R, I)
+        N += H.shape[-1] - 1
+
+    # Crop leading zeros
+    x = crop(x,(N,0))
+
+    return x
+
+def filtering(x: Tensor, H: Tensor, R: int = 1, I: int = 1):
+    _, M = H.shape
+    
+    # Zeropad signal to get entire filter response
+    x = zeropad(x,(M,0))
+
+    # Sliding window
+    x = x.reshape((1,-1))
+    x = x.unfold(1, M, R)
+    
+    x = einsum('cn,wn->cw', x, H)
+
+    return x
 
 def zeropad(x: np.ndarray, C: tuple):
     return pad(x, (C), 'constant', 0)

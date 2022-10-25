@@ -9,7 +9,7 @@ if __name__ == "__main__":
 
         description='Perfect Reconstruction Filter Banks',
         author='Niklas Winter',
-        author_email='niklas.winter@audiolabs-erlangen.de',
+        author_email='niklas.winter93@googlemail.de',
 
         license='proprietary',
         packages=setuptools.find_packages(),
